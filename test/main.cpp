@@ -2,34 +2,37 @@
 
 #include <iostream>
 #include <bitset>
+#include <cassert>
 
 int main()
 {
-    std::bitset<10> a;
+    hmbl::bitset<999> hmbl_b;
 
-    a.test(1);
-    a.all();
-    a.any();
-    a.none();
+    assert(hmbl_b.size() == 999);
+    assert(hmbl_b.count() == 0);
+    assert(!hmbl_b.any());
+    assert(!hmbl_b.all());
+    assert(hmbl_b.none());
 
-    a.count();
-    a.flip();
-    a.set();
-    a.reset();
-    a.set(1);
-    a.reset(1);
+    assert(hmbl_b.set(100).test(100));
+    assert(hmbl_b.count() == 1);
+    assert(hmbl_b.any());
+    assert(!hmbl_b.none());
+    assert(!hmbl_b.flip().test(100));
+    assert(hmbl_b.count() == 998);
 
-    hmbl::bitset<62, uint32_t> b1{}; // non-optimized version
-    hmbl::bitset<62, uint64_t> b2{}; // optimized version
-    hmbl::bitset<30, uint32_t> b3{}; // optimized
-    b3.set();
-    printf("res = %d\n", int(b2 == b1));
-    b2.flip();
-    printf("res = %d\n", int(b2 == b1));
-    b1.flip();
-    printf("b2.size() = %lu\n", b1.size());
-    b3 != b3;
-    // b2 == b2;
-    // b2 == b2;
+    assert(hmbl_b.reset().count() == 0);
+    assert(!hmbl_b.any());
+    assert(!hmbl_b.all());
+    assert(hmbl_b.none());
+    assert(hmbl_b.set(125).set(126).set(127).count() == 3);
+
+    hmbl::bitset<999> hmbl_b1;
+    assert(hmbl_b1.set(125).set(126).set(127).count() == 3);
+    assert(hmbl_b == hmbl_b1);
+    assert((hmbl_b1 >>= 2).count() == 3);
+    assert((hmbl_b1 & hmbl_b).count() == 1);
+    assert((hmbl_b1 | hmbl_b).count() == 5);
+
     return 0;
 }

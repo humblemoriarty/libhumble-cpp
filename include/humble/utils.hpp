@@ -15,6 +15,13 @@ inline constexpr T div_celling(T v, T d)
     return (v + d - 1) / d;
 }
 
+template <std::unsigned_integral T, size_t Alignment>
+inline constexpr T align_up(T v)
+{
+    assert(v != 0);
+    return Alignment * div_celling(v, Alignment);
+}
+
 } // namespace hmbl
 
 #endif
