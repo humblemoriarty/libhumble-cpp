@@ -1,26 +1,21 @@
 #ifndef LIBHUMBLE_CPP_DETAIL_MEMORY_TRAITS_HPP_
 #define LIBHUMBLE_CPP_DETAIL_MEMORY_TRAITS_HPP_
 
-#include <cstdlib>
 #include <cstddef>
-#include <concepts>
-#include <memory>
+
+#include "humble/utils.hpp"
 
 namespace hmbl::detail
 {
-struct static_memory_traits_base
-{
-    // static constexpr size_t c_small_len = 16;
-    static constexpr size_t c_alignment = 16;
-};
 
 template <typename TWord>
-struct static_memory_traits : public static_memory_traits_base
+struct StaticMemoryTraits
 {
-    template <size_t DataSize>
-    static constexpr bool const_size_cmp(const TWord *v1, const TWord *v2) noexcept
+    /// Check for equality two arrays of the same constant size
+    template <size_t kDataSize>
+    static constexpr bool const_size_eq(const TWord v1[kDataSize], const TWord v2[kDataSize]) noexcept
     {
-        for (size_t i = 0; i < DataSize; ++i)
+        for (size_t i = 0; i < kDataSize; ++i)
         {
             if (v1[i] != v2[i])
                 return false;
@@ -28,41 +23,46 @@ struct static_memory_traits : public static_memory_traits_base
         return true;
     }
 
-    /// Returns true if every byte equal the given word
-    template <TWord W, size_t DataSize>
-    static constexpr bool const_size_word_cmp(const TWord *v) noexcept
+    /// Check if every word of the given constant size array equal to @p kW
+    template <TWord kW, size_t kDataSize>
+    static constexpr bool const_size_word_eq(const TWord v[kDataSize]) noexcept
     {
-        for (size_t i = 0; i < DataSize; ++i)
-            if (v[i] != W)
+        for (size_t i = 0; i < kDataSize; ++i)
+            if (v[i] != kW)
                 return false;
         return true;
     }
 
-    template <TWord W, size_t DataSize>
-    static constexpr void const_size_word_set(TWord *v) noexcept
+    /// Set each word of the constant size array to @p kW
+    template <TWord kW, size_t kDataSize>
+    static constexpr void const_size_word_set(TWord v[kDataSize]) noexcept
     {
-        for (size_t i = 0; i < DataSize; ++i)
-            v[i] = W;
+        for (size_t i = 0; i < kDataSize; ++i)
+            v[i] = kW;
     }
 
-    template <TWord W>
+    /// Sen @p n words of @p v to value @p kW
+    template <TWord kW>
     static constexpr void word_set(TWord *v, size_t n) noexcept
     {
         for (size_t i = 0; i < n; ++i)
-            v[i] = W;
+            v[i] = kW;
     }
 
-    template <size_t DataSize, typename Op>
-    static constexpr void const_size_apply(TWord *v, Op&& op) noexcept
+    /// Apply @p op to each word of the constant size array
+    template <size_t kDataSize, typename TOp>
+    static constexpr void const_size_apply(TWord v[kDataSize], TOp&& op) noexcept
     {
-        for (size_t i = 0; i < DataSize; ++i)
+        for (size_t i = 0; i < kDataSize; ++i)
             v[i] = op(v[i]);
     }
 
-    template <size_t DataSize, typename Op>
-    static constexpr void const_size_bin_op(TWord *dst_v, const TWord *v1, const TWord *v2, Op&& op) noexcept
+    /// Apply binary @p op to each word pair of given constant size arrays and save result to @p dst_v
+    template <size_t kDataSize, typename TOp>
+    static constexpr void const_size_bin_op(TWord dst_v[kDataSize],
+        const TWord v1[kDataSize], const TWord v2[kDataSize], TOp&& op) noexcept
     {
-        for (size_t i = 0; i < DataSize; ++i)
+        for (size_t i = 0; i < kDataSize; ++i)
             dst_v[i] = op(v1[i], v2[i]);
     }
 };

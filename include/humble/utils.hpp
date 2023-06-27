@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <concepts>
+#include <bit>
 
 namespace hmbl::utils
 {
@@ -22,6 +23,12 @@ inline constexpr T align_up(T v)
     return Alignment * div_celling(v, Alignment);
 }
 
-} // namespace hmbl
+template <std::unsigned_integral T>
+inline constexpr bool is_pow_2(T v)
+{
+    return std::popcount(v) == 1;
+}
+
+} // namespace hmbl::utils
 
 #endif

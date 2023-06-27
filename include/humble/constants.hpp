@@ -3,10 +3,10 @@
 
 #include <cstdlib>
 
-namespace hmbl::C
+namespace hmbl::K
 {
 
-inline constexpr size_t bits_per_byte = 8;
+inline constexpr size_t kBitsPerByte = 8;
 
 } // namespace hmbl
 

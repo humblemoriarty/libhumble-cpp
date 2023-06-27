@@ -3,9 +3,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <cstdint>
-#include <cstring>
-#include <algorithm>
 #include <bit>
 #include <concepts>
 #include <limits>
@@ -24,70 +21,70 @@ namespace detail
 {
 
 template <typename TWord>
-concept BitsetWordConcept = std::unsigned_integral<TWord>;
+concept CBitsetWordConcept = std::unsigned_integral<TWord>;
 
-template <size_t Size, typename TWord>
-concept BitsetOptimizedParamsConcept = BitsetWordConcept<TWord>
-                                    && Size <= std::numeric_limits<TWord>::digits;
+template <size_t kSize, typename TWord>
+concept CBitsetOptimizedParamsConcept = CBitsetWordConcept<TWord>
+                                     && kSize <= std::numeric_limits<TWord>::digits;
 
 } // namespace detail
 
-template <size_t Size, typename TWord = uint64_t,
-          template <typename> typename TMemTraits = detail::static_memory_traits>
-    requires detail::BitsetWordConcept<TWord>
-class bitset
+template <size_t kSize, typename TWord = uint64_t,
+          template <typename> typename TMemTraits = detail::StaticMemoryTraits>
+    requires detail::CBitsetWordConcept<TWord>
+class Bitset
 {
-    using memory_traits = TMemTraits<TWord>;
+    using MemoryTraits = TMemTraits<TWord>;
 
-    static constexpr size_t c_word_size_     = sizeof(TWord);
-    static constexpr size_t c_n_bits_        = Size;
-    static constexpr size_t c_n_bytes_       = utils::div_celling(Size, C::bits_per_byte);
-    static constexpr size_t c_n_words_       = utils::div_celling(c_n_bytes_, c_word_size_);
-    static constexpr size_t c_bits_per_word_ = c_word_size_ * C::bits_per_byte;
+    static constexpr size_t kWordSize     = sizeof(TWord);
+    static constexpr size_t kNBits        = kSize;
+    static constexpr size_t kNBytes       = utils::div_celling(kSize, K::kBitsPerByte);
+    static constexpr size_t kNWords       = utils::div_celling(kNBytes, kWordSize);
+    static constexpr size_t kBitsPerWord  = kWordSize * K::kBitsPerByte;
 
-    static constexpr TWord c_word_none_mask_       = static_cast<TWord>(0);
-    static constexpr TWord c_word_all_mask_        = ~c_word_none_mask_;
-    static constexpr TWord c_hi_word_all_mask_     = c_word_all_mask_ >> (c_n_words_ * c_bits_per_word_ - c_n_bits_);
+    static constexpr TWord kWordNoneMask  = static_cast<TWord>(0);
+    static constexpr TWord kWordAllMask   = ~kWordNoneMask;
+    static constexpr TWord kHiWordAllMask = kWordAllMask >> (kNWords * kBitsPerWord - kNBits);
 
-    constexpr size_t        word_idx_(size_t pos) const noexcept { return pos / c_bits_per_word_; }
+    constexpr size_t        word_idx_(size_t pos) const noexcept { return pos / kBitsPerWord; }
     constexpr TWord &       word_(size_t pos)           noexcept { return words_[word_idx_(pos)]; }
     constexpr const TWord & word_(size_t pos)     const noexcept { return words_[word_idx_(pos)]; }
-    constexpr TWord &       hi_word_()                  noexcept { return words_[c_n_words_ - 1]; }
-    constexpr const TWord & hi_word_()            const noexcept { return words_[c_n_words_ - 1]; }
+    constexpr TWord &       hi_word_()                  noexcept { return words_[kNWords - 1]; }
+    constexpr const TWord & hi_word_()            const noexcept { return words_[kNWords - 1]; }
 
-    static constexpr size_t bit_idx_(size_t pos)        noexcept { return pos % c_bits_per_word_; }
-    static constexpr TWord  bit_mask_(size_t pos)       noexcept { return static_cast<TWord>(1) << bit_idx_(pos); }
+    static constexpr size_t bit_idx_(size_t pos)        noexcept { return pos % kBitsPerWord; }
+    static constexpr TWord  bit_mask_(size_t pos)       noexcept { return TWord(1) << bit_idx_(pos); }
 
-    TWord words_[c_n_words_]{};
+    TWord words_[kNWords]{};
 
 public:
-    constexpr bitset() = default;
-    constexpr bitset(TWord val) : words_{val}
+    constexpr Bitset() = default;
+    constexpr Bitset(TWord val) : words_{val}
     {
-        if constexpr (c_n_bits_ < c_bits_per_word_)
+        if constexpr (kNBits < kBitsPerWord)
         {
-            hi_word_() &= c_hi_word_all_mask_;
+            hi_word_() &= kHiWordAllMask;
         }
     }
 
-    static constexpr auto size() noexcept { return c_n_bits_; }
+    static constexpr auto size() noexcept { return kNBits; }
 
     constexpr bool test(size_t pos) const noexcept
     {
-        assert(pos < c_n_bits_);
+        assert(pos < kNBits);
         return word_(pos) & bit_mask_(pos);
     }
 
     constexpr bool all() const noexcept
     {
-        if (!memory_traits::template const_size_word_cmp<c_word_all_mask_, c_n_words_ - 1>(words_))
+        if (!MemoryTraits::template const_size_word_eq<kWordAllMask, kNWords - 1>(words_))
             return false;
-        return hi_word_() == c_hi_word_all_mask_;
+        return hi_word_() == kHiWordAllMask;
     }
 
     constexpr bool any() const noexcept
     {
-        if (!memory_traits::template const_size_word_cmp<c_word_none_mask_, c_n_words_>(words_))
+        if (!MemoryTraits::template const_size_word_eq<kWordNoneMask, kNWords>(words_))
             return true;
         return false;
     }
@@ -104,47 +101,47 @@ public:
 
     auto operator~() const noexcept
     {
-        return bitset<Size, TWord, TMemTraits>(*this).flip();
+        return Bitset<kSize, TWord, TMemTraits>(*this).flip();
     }
 
-    constexpr bool operator==(const bitset<Size, TWord, TMemTraits> &other) const noexcept
+    constexpr bool operator==(const Bitset<kSize, TWord, TMemTraits> &other) const noexcept
     {
-        return memory_traits::template const_size_cmp<c_n_words_>(words_, other.words_);
+        return MemoryTraits::template const_size_eq<kNWords>(words_, other.words_);
     }
 
-    auto & operator&=(const bitset<Size, TWord, TMemTraits> &other) noexcept
+    auto & operator&=(const Bitset<kSize, TWord, TMemTraits> &other) noexcept
     {
-        memory_traits::template const_size_bin_op<c_n_words_>(words_, words_, other.words_,
-                                                              [](auto v1, auto v2) { return v1 & v2; });
+        MemoryTraits::template const_size_bin_op<kNWords>(words_, words_, other.words_,
+                                                          [](auto v1, auto v2) { return v1 & v2; });
         return *this;
     }
 
-    auto & operator|=(const bitset<Size, TWord, TMemTraits> &other) noexcept
+    auto & operator|=(const Bitset<kSize, TWord, TMemTraits> &other) noexcept
     {
-        memory_traits::template const_size_bin_op<c_n_words_>(words_, words_, other.words_,
-                                                   [](auto v1, auto v2) { return v1 | v2; });
+        MemoryTraits::template const_size_bin_op<kNWords>(words_, words_, other.words_,
+                                                          [](auto v1, auto v2) { return v1 | v2; });
         return *this;
     }
 
-    auto & operator^=(const bitset<Size, TWord, TMemTraits> &other) noexcept
+    auto & operator^=(const Bitset<kSize, TWord, TMemTraits> &other) noexcept
     {
-        memory_traits::template const_size_bin_op<c_n_words_>(words_, words_, other.words_,
-                                                   [](auto v1, auto v2) { return v1 ^ v2; });
+        MemoryTraits::template const_size_bin_op<kNWords>(words_, words_, other.words_,
+                                                          [](auto v1, auto v2) { return v1 ^ v2; });
         return *this;
     }
 
     auto & operator>>=(size_t shift) noexcept
     {
         if (!shift) [[unlikely]] return *this;
-        if (shift > c_n_bits_) [[unlikely]]
+        if (shift > kNBits) [[unlikely]]
         {
             reset();
             return *this;
         }
 
-        size_t wshift = shift / c_bits_per_word_;
-        size_t bshift = shift % c_bits_per_word_; // local shift
-        size_t last_w = c_n_words_ - wshift - 1;  // last word to be processed
+        size_t wshift = shift / kBitsPerWord;
+        size_t bshift = shift % kBitsPerWord; // local shift
+        size_t last_w = kNWords - wshift - 1; // last word to be processed
 
         if (!bshift) [[unlikely]]
         {
@@ -152,14 +149,14 @@ public:
                 words_[i] = words_[last_w + wshift];
         }
 
-        size_t bshift_opposite = c_bits_per_word_ - bshift;
+        size_t bshift_opposite = kBitsPerWord - bshift;
         for (size_t i = 0; i < last_w; ++i)
         {
             words_[i] = (words_[i + wshift] >> bshift) |
                         (words_[i + wshift + 1] << bshift_opposite);
         }
-        words_[last_w] = words_[c_n_words_ - 1] >> bshift;
-        memory_traits::template word_set<c_word_none_mask_>(words_ + last_w + 1, c_n_words_ - last_w - 1);
+        words_[last_w] = words_[kNWords - 1] >> bshift;
+        MemoryTraits::template word_set<kWordNoneMask>(words_ + last_w + 1, kNWords - last_w - 1);
 
         // no need to sanitize
         return *this;
@@ -168,45 +165,45 @@ public:
     auto & operator<<=(size_t shift) noexcept
     {
         if (!shift) [[unlikely]] return *this;
-        if (shift > c_n_bits_) [[unlikely]]
+        if (shift > kNBits) [[unlikely]]
         {
             reset();
             return *this;
         }
 
-        size_t wshift = shift / c_bits_per_word_;
-        size_t bshift = shift % c_bits_per_word_; // local shift
-        size_t last_w = c_n_words_ - wshift - 1;  // last word to be processed
+        size_t wshift = shift / kBitsPerWord;
+        size_t bshift = shift % kBitsPerWord; // local shift
+        size_t last_w = kNWords - wshift - 1; // last word to be processed
 
         if (!bshift) [[unlikely]]
         {
-            for (size_t i = c_n_words_ - 1; i >= wshift; --i)
+            for (size_t i = kNWords - 1; i >= wshift; --i)
                 words_[i] = words_[last_w - wshift];
         }
 
-        size_t bshift_opposite = c_bits_per_word_ - bshift;
-        for (size_t i = c_n_words_ - 1; i > wshift ; --i)
+        size_t bshift_opposite = kBitsPerWord - bshift;
+        for (size_t i = kNWords - 1; i > wshift ; --i)
         {
             words_[i] = (words_[i - wshift] << bshift) |
                         (words_[i - wshift - 1] >> bshift_opposite);
         }
         words_[wshift] = words_[0] << bshift;
-        memory_traits::template word_set<c_word_none_mask_>(words_, wshift);
+        MemoryTraits::template word_set<kWordNoneMask>(words_, wshift);
 
-        hi_word_() &= c_hi_word_all_mask_;
+        hi_word_() &= kHiWordAllMask;
         return *this;
     }
 
     auto & set() noexcept
     {
-        memory_traits::template const_size_word_set<c_word_all_mask_, c_n_words_>(words_);
-        hi_word_() &= c_hi_word_all_mask_;
+        MemoryTraits::template const_size_word_set<kWordAllMask, kNWords>(words_);
+        hi_word_() &= kHiWordAllMask;
         return *this;
     }
 
     auto & set(size_t pos, bool val = true) noexcept
     {
-        assert(pos < c_n_bits_);
+        assert(pos < kNBits);
         if (val)
             word_(pos) |= bit_mask_(pos);
         else
@@ -216,7 +213,7 @@ public:
 
     auto & reset() noexcept
     {
-        memory_traits::template const_size_word_set<c_word_none_mask_, c_n_words_>(words_);
+        MemoryTraits::template const_size_word_set<kWordNoneMask, kNWords>(words_);
         return *this;
     }
 
@@ -228,50 +225,50 @@ public:
 
     auto & flip() noexcept
     {
-        memory_traits::template const_size_apply<c_n_words_>(words_, [](auto v) { return ~v; });
-        hi_word_() &= c_hi_word_all_mask_;
+        MemoryTraits::template const_size_apply<kNWords>(words_, [](auto v) { return ~v; });
+        hi_word_() &= kHiWordAllMask;
         return *this;
     }
 
     template <size_t Sz, typename TW, template <typename> typename TMT>
-    friend bitset<Sz, TW, TMT> operator&(const bitset<Sz, TW, TMT> &lhv,
-                                         const bitset<Sz, TW, TMT> &rhv) noexcept
+    friend Bitset<Sz, TW, TMT> operator&(const Bitset<Sz, TW, TMT> &lhv,
+                                         const Bitset<Sz, TW, TMT> &rhv) noexcept
     {
-        bitset tmp(lhv);
+        Bitset tmp(lhv);
         tmp &= rhv;
         return tmp;
     }
 
     template <size_t Sz, typename TW, template <typename> typename TMT>
-    friend bitset<Sz, TW, TMT> operator|(const bitset<Sz, TW, TMT> &lhv,
-                                         const bitset<Sz, TW, TMT> &rhv) noexcept
+    friend Bitset<Sz, TW, TMT> operator|(const Bitset<Sz, TW, TMT> &lhv,
+                                         const Bitset<Sz, TW, TMT> &rhv) noexcept
     {
-        bitset tmp(lhv);
+        Bitset tmp(lhv);
         tmp |= rhv;
         return tmp;
     }
 
     template <size_t Sz, typename TW, template <typename> typename TMT>
-    friend bitset<Sz, TW, TMT> operator^(const bitset<Sz, TW, TMT> &lhv,
-                                         const bitset<Sz, TW, TMT> &rhv) noexcept
+    friend Bitset<Sz, TW, TMT> operator^(const Bitset<Sz, TW, TMT> &lhv,
+                                         const Bitset<Sz, TW, TMT> &rhv) noexcept
     {
-        bitset tmp(lhv);
+        Bitset tmp(lhv);
         tmp ^= rhv;
         return tmp;
     }
 
     template <size_t Sz, typename TW, template <typename> typename TMT>
-    friend bitset<Sz, TW, TMT> operator>>(const bitset<Sz, TW, TMT> &v, size_t shift) noexcept
+    friend Bitset<Sz, TW, TMT> operator>>(const Bitset<Sz, TW, TMT> &v, size_t shift) noexcept
     {
-        bitset tmp(shift);
+        Bitset tmp(shift);
         tmp >>= shift;
         return tmp;
     }
 
     template <size_t Sz, typename TW, template <typename> typename TMT>
-    friend bitset<Sz, TW, TMT> operator<<(const bitset<Sz, TW, TMT> &v, size_t shift) noexcept
+    friend Bitset<Sz, TW, TMT> operator<<(const Bitset<Sz, TW, TMT> &v, size_t shift) noexcept
     {
-        bitset tmp(shift);
+        Bitset tmp(shift);
         tmp <<= shift;
         return tmp;
     }
