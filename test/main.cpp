@@ -45,25 +45,38 @@ int main()
     assert((hmbl_b1 | hmbl_b).count() == 5);
 
     using DBitset = hmbl::SparseDynamicBitset<hmbl::posix::AlignedAllocator<uint64_t, 64>>;
-    size_t bits1[] = {10, 15, 56, 111, 5555};
-    size_t bits2[] = {792, 5555};
+    size_t bits1[] = {65, 111, 555, 1'000'000};
+    size_t bits2[] = {10, 132, 792, 5555, 1'000'000};
     size_t bits3[] = {1, 554, 8190};
-    DBitset db1(bits1, 8192);
-    DBitset db2(bits2, 8192);
-    DBitset db3(bits2, 8192);
-    DBitset db4(bits2, 8192);
-    DBitset db5(bits2, 8192);
-    DBitset db6(bits2, 8192);
-    DBitset db7(bits2, 8192);
-    DBitset db8(bits2, 8192);
-    DBitset db9(bits2, 8192);
-    DBitset db10(bits2, 8192);
+    DBitset db1(bits1, 2'000'000);
+    DBitset db2(bits2, 2'000'000);
+    DBitset db3(bits3, 2'000'000);
+    DBitset db4(bits3, 2'000'000);
+    DBitset db5(bits3, 2'000'000);
+    DBitset db6(bits3, 2'000'000);
+    DBitset db7(bits3, 2'000'000);
+    DBitset db8(bits3, 2'000'000);
+    // DBitset db3(bits2, 8192);
+    // DBitset db4(bits2, 8192);
+    // DBitset db5(bits2, 8192);
+    // DBitset db6(bits2, 8192);
+    // DBitset db7(bits2, 8192);
+    // DBitset db8(bits2, 8192);
+    // DBitset db9(bits2, 8192);
+    // DBitset db10(bits2, 8192);
 
-    DBitset const *dyn_bitsets[] = {&db1, &db2, &db3, &db4, &db5, &db6, &db7, &db8, &db9, &db10};
+    // using DBitset2 = hmbl::SparseDynamicBitset<hmbl::posix::AlignedAllocator<uint64_t, 64>>;
+    // DBitset2 db2_1(bits1, 8192);
+    // DBitset2 db2_2(bits2, 8192);
+
+    DBitset  const *dyn_bitsets[]  = {&db1, &db2, &db3, &db4, &db5, &db6, &db7, &db8}; //&db3, &db4, &db5, &db6, &db7, &db8, &db9, &db10};
+    // DBitset2 const *dyn_bitsets2[] = {&db2_2, &db2_1};
 
     auto res = DBitset::and_any(dyn_bitsets);
+    // auto res2 = DBitset::and_any(dyn_bitsets2);
 
-    printf("res = %lu sizeof(__m512i) = %lu\n", res.value_or(0), sizeof(__m512i));
+    printf("res = %lu sizeof(__m512i) = %lu bitset<128> = %lu\n", res.value_or(0), sizeof(__m512i), sizeof(std::bitset<128>));
+    // printf("res = %lu sizeof(__m512i) = %lu bitset<128> = %lu\n", res2.value_or(0), sizeof(__m512i), sizeof(std::bitset<128>));
 
     // hmbl::posix::AlignedAllocator<int, 64> alloc;
     // AlignedAllocatorUser<hmbl::posix::AlignedAllocator<int, 32>> u;
