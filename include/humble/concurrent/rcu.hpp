@@ -22,10 +22,10 @@ class RcuContext
 
 public:
     using ResourcePointer               = const T*;
-    using OwningResourcePointer         = std::unique_ptr<const T, Deleter>;
+    using OwningResourcePointer         = std::unique_ptr<T, Deleter>;
 
 private:
-    using AtomicConstResourcePointer    = std::atomic<ConstPointer>;
+    using AtomicConstResourcePointer    = std::atomic<ResourcePointer>;
 
     static_assert(AtomicConstResourcePointer::is_always_lock_free);
 
@@ -77,35 +77,36 @@ public:
     /// @warning The context MUST have no active readers.
     ~RcuContext()
     {
-        assert(!in_progress());
+        assert(!is_in_progress());
         assert(!active_readers_);
     }
 
-    auto readers_in_progress() const noexcept   { return readers_upd_in_progress_.load(std::memory_order_acquire); }
+    size_t get_active_readers_count() const noexcept        { return active_readers_; }
+    size_t get_readers_in_progress_count() const noexcept   { return readers_upd_in_progress_.load(std::memory_order_acquire); }
 
     /// @brief Checks if there is at least one active reader that haven't fetched the new pointer yet (i.e. an update is in progress).
-    bool in_progress() const noexcept           { return !!readers_in_progress(); }
+    bool is_in_progress() const noexcept        { return !!get_readers_in_progress_count(); }
 
     /// @brief Assigns a new resourse pointer.
     /// @param p A resource pointer.
     /// @warning There MUST be no any operation in progress.
     void update(OwningResourcePointer p) noexcept
     {
-        assert(!in_progress()); // no readers waiting for update
+        assert(!is_in_progress()); // no readers waiting for update
 
         // protect with mutex to make sure there's no activation/deactivation in progress
         std::lock_guard lock{mtx_};
         readers_upd_in_progress_.store(active_readers_, std::memory_order_release);
 
         outdated_resource_ = std::exchange(resource_, std::move(p)); // update stored owning pointer
-        cached_resource_ptr_.store(value_ptr_.get(), std::memory_order_release); // make visible a new pointer for readers
+        cached_resource_ptr_.store(resource_.get(), std::memory_order_release); // make visible a new pointer for readers
     }
 
     /// @brief If there is no update in progress - releases the old resource.
     /// @return `true` - if the operation succeeded, otherwise - `false`.
     bool check_update_complete() noexcept
     {
-        if (!in_progress())
+        if (!is_in_progress())
         {
             outdated_resource_.reset();
             return true;
@@ -137,8 +138,8 @@ class RcuReader
 {
     friend class RcuContext<T, Deleter>;
 
-    using Context       = RcuContext<T, Deleter>;
-    using typename        Context::ResourcePointer;
+    using Context           = RcuContext<T, Deleter>;
+    using ResourcePointer   = typename Context::ResourcePointer;
 
     Context                *ctx_{};
     ResourcePointer         cached_resource_ptr_{};
@@ -163,18 +164,18 @@ public:
 
     /// @brief Moves the resource from another reader leaving it invalid.
     RcuReader(RcuReader &&other) noexcept
-        : ctx_{std::exchange(other->ctx_, nullptr)}
-        , cached_resource_ptr_{std::exchange(other->cached_resource_ptr_, nullptr)}
-        , active_{std::exchange(other->active_, false)}
+        : ctx_{std::exchange(other.ctx_, nullptr)}
+        , cached_resource_ptr_{std::exchange(other.cached_resource_ptr_, nullptr)}
+        , active_{std::exchange(other.active_, false)}
     {
     }
 
     /// @brief Moves the resource from another reader leaving it invalid.
     RcuReader & operator=(RcuReader &&other) noexcept
     {
-        ctx_                    = std::exchange(other->ctx_, nullptr);
-        cached_resource_ptr_    = std::exchange(other->cached_resource_ptr_, nullptr);
-        active_                 = std::exchange(other->active_, false);
+        ctx_                    = std::exchange(other.ctx_, nullptr);
+        cached_resource_ptr_    = std::exchange(other.cached_resource_ptr_, nullptr);
+        active_                 = std::exchange(other.active_, false);
         return *this;
     }
 
