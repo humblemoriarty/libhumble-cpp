@@ -21,7 +21,7 @@ class RcuContext
     friend class RcuReader<T, Deleter>;
 
 public:
-    using ConstResourcePointer          = const T*;
+    using ResourcePointer               = const T*;
     using OwningResourcePointer         = std::unique_ptr<const T, Deleter>;
 
 private:
@@ -41,7 +41,7 @@ private:
         readers_upd_in_progress_.fetch_sub(1, std::memory_order_release);
     }
 
-    ConstResourcePointer fetch_and_notify(ConstResourcePointer p) noexcept
+    ResourcePointer fetch_and_notify(ResourcePointer p) noexcept
     {
         auto new_p = cached_resource_ptr_.load(std::memory_order_acquire);
         if (p != new_p) [[unlikely]]
@@ -49,14 +49,14 @@ private:
         return new_p;
     }
 
-    ConstResourcePointer activate_reader() noexcept
+    ResourcePointer activate_reader() noexcept
     {
         std::lock_guard lock{mtx_};
         ++active_readers_;
         return resource_.get();
     }
 
-    void deactivate_reader(ConstResourcePointer p) noexcept
+    void deactivate_reader(ResourcePointer p) noexcept
     {
         std::lock_guard lock{mtx_};
         assert(active_readers_);
@@ -125,10 +125,10 @@ public:
         }
     }
 
-    void wait_and_update(OwningResourcePointer p) noexcept
+    void update_and_wait_complete(OwningResourcePointer p) noexcept
     {
-        wait_update_complete();
         update(std::move(p));
+        wait_update_complete();
     }
 };
 
@@ -138,10 +138,10 @@ class RcuReader
     friend class RcuContext<T, Deleter>;
 
     using Context       = RcuContext<T, Deleter>;
-    using typename Context::ConstResourcePointer;
+    using typename Context::ResourcePointer;
 
     Context                *ctx_{};
-    ConstResourcePointer    cached_resource_ptr_{};
+    ResourcePointer    cached_resource_ptr_{};
     bool                    active_{};
 
 public:
@@ -195,7 +195,7 @@ public:
     explicit operator bool() const noexcept { return is_valid(); }
 
     /// @brief Gets a resource pointer fetch at the last `update()`.
-    ConstResourcePointer get_resource() const noexcept  { assert(is_active()); return cached_resource_ptr_; }
+    ResourcePointer get_resource() const noexcept  { assert(is_active()); return cached_resource_ptr_; }
 
     /// @brief Registers the object as an active in the parent or does nothing if it's already active.
     void activate() noexcept
