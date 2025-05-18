@@ -138,10 +138,10 @@ class RcuReader
     friend class RcuContext<T, Deleter>;
 
     using Context       = RcuContext<T, Deleter>;
-    using typename Context::ResourcePointer;
+    using typename        Context::ResourcePointer;
 
     Context                *ctx_{};
-    ResourcePointer    cached_resource_ptr_{};
+    ResourcePointer         cached_resource_ptr_{};
     bool                    active_{};
 
 public:
